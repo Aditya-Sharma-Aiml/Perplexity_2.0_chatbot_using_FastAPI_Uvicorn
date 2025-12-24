@@ -7,9 +7,8 @@ for k in [
 ]:
     os.environ[k] = ""
 
-# =========================
+
 # Imports
-# =========================
 
 from typing import TypedDict, Annotated, Optional
 from uuid import uuid4
@@ -31,9 +30,7 @@ from langchain_tavily import TavilySearch
 
 
 
-# =========================
 # ENV
-# =========================
 load_dotenv()
 
 # REQUIRED in .env:
@@ -41,23 +38,18 @@ load_dotenv()
 # OPENAI_BASE_URL=https://openrouter.ai/api/v1
 # TAVILY_API_KEY=tvly-xxxxxxxxxxxxxx
 
-# =========================
+
 # LangGraph State
-# =========================
 class State(TypedDict):
     messages: Annotated[list, add_messages]
 
 memory = MemorySaver()
 
-# =========================
 # Tool (Tavily Search)
-# =========================
 search_tool = TavilySearch(max_results=4)
 tools = [search_tool]
 
-# =========================
 # LLM (OpenRouter via OpenAI-compatible API)
-# =========================
 llm = ChatOpenAI(
     model="openai/gpt-4o-mini",   
     temperature=0,
@@ -71,9 +63,9 @@ llm = ChatOpenAI(
 
 llm_with_tools = llm.bind_tools(tools=tools)
 
-# =========================
+
 # Graph Nodes
-# =========================
+
 async def model(state: State):
     try:
         result = await llm_with_tools.ainvoke(state["messages"])
@@ -109,9 +101,9 @@ async def tool_node(state: State):
 
     return {"messages": tool_messages}
 
-# =========================
+
 # Build Graph
-# =========================
+
 graph_builder = StateGraph(State)
 
 graph_builder.add_node("model", model)
@@ -123,9 +115,9 @@ graph_builder.add_edge("tool_node", "model")
 
 graph = graph_builder.compile(checkpointer=memory)
 
-# =========================
+
 # FastAPI App
-# =========================
+
 app = FastAPI()
 
 # ---------------- Title Generator ----------------
@@ -161,17 +153,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# =========================
+
 # Helpers
-# =========================
+
 def serialise_ai_message_chunk(chunk):
     if isinstance(chunk, AIMessageChunk):
         return chunk.content
     raise TypeError("Invalid chunk type")
 
-# =========================
+
 # SSE Generator
-# =========================
+
 async def generate_chat_responses(message: str, checkpoint_id: Optional[str] = None):
     new_chat = checkpoint_id is None
 
@@ -207,9 +199,9 @@ async def generate_chat_responses(message: str, checkpoint_id: Optional[str] = N
     yield f"data: {{\"type\": \"end\"}}\n\n"
 
 
-# =========================
+
 # API Route
-# =========================
+
 @app.get("/chat_stream/{message}")
 async def chat_stream(message: str, checkpoint_id: Optional[str] = Query(None)):
     return StreamingResponse(
